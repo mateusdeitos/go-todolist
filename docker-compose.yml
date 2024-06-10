@@ -1,0 +1,38 @@
+version: "3.5"
+
+services:
+  api:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/app
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_USER=admin
+      - DB_PASSWORD=123
+      - DB_NAME=go_todo_list
+      - DB_PORT=5432
+      - SERVER_PORT=9000
+    ports:
+      - "9000:9000"
+
+  db:
+    image: postgres:latest
+    hostname: db
+    command: postgres
+    environment:
+      - POSTGRES_DB=go_todo_list
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=123
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db:/var/lib/postgresql/data
+
+networks:
+  default:
+    driver: bridge
+    name: go_toto_list
