@@ -5,8 +5,8 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
-    volumes:
-      - ./:/app
+    # volumes:
+    #   - ./:/usr/app
     depends_on:
       - db
     environment:
