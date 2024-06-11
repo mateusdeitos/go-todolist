@@ -19,7 +19,15 @@ func main() {
 		panic(err)
 	}
 
-	r.HandleFunc("/todo", ListTodosHandler).Methods(http.MethodGet)
+	sqlDb, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+	defer sqlDb.Close()
+
+	r.HandleFunc("/todo", Wrapped(db, ListTodosHandler)).Methods(http.MethodGet)
+	r.HandleFunc("/todo", Wrapped(db, CreateTodoHandler)).Methods(http.MethodPost)
+
 
 	http.ListenAndServe(":9000", r)
 
@@ -36,13 +44,41 @@ func createDb() *gorm.DB {
 	return db
 }
 
-func ListTodosHandler(w http.ResponseWriter, r *http.Request) {
-	todos := []*entity.Todo{
-		entity.NewTodo("todo1"),
-		entity.NewTodo("todo2"),
+type CustomHandler func(http.ResponseWriter, *http.Request, *gorm.DB)
+
+func Wrapped(db *gorm.DB, h CustomHandler) http.HandlerFunc {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		h(w, r, db)
+	}
+
+	return http.HandlerFunc(fn)
+}
+
+func ListTodosHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	result := []entity.Todo{}
+	todos := db.Find(&result)
+	if todos.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 
-	json.NewEncoder(w).Encode(todos)
+	json.NewEncoder(w).Encode(result)
+}
+
+func CreateTodoHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	w.Header().Set("Content-Type", "application/json")
+
+	decoder := json.NewDecoder(r.Body)
+	var todo entity.Todo
+	err := decoder.Decode(&todo)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	db.Create(&todo)
+	json.NewEncoder(w).Encode(todo)
+}
 }

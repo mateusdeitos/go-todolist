@@ -18,6 +18,11 @@ services:
       - SERVER_PORT=9000
     ports:
       - "9000:9000"
+    develop:
+      watch:
+        - action: rebuild
+          path: ./src
+          target: /usr/app/src
 
   db:
     image: postgres:latest
