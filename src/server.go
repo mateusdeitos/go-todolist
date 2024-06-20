@@ -28,6 +28,7 @@ func main() {
 	r.HandleFunc("/todo", Wrapped(db, ListTodosHandler)).Methods(http.MethodGet)
 	r.HandleFunc("/todo", Wrapped(db, CreateTodoHandler)).Methods(http.MethodPost)
 
+	r.HandleFunc("/todo/{id:[0-9]+}", Wrapped(db, UpdateTodoHandler)).Methods(http.MethodPut)
 
 	http.ListenAndServe(":9000", r)
 
@@ -81,4 +82,29 @@ func CreateTodoHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	db.Create(&todo)
 	json.NewEncoder(w).Encode(todo)
 }
+
+func UpdateTodoHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	w.Header().Set("Content-Type", "application/json")
+
+	id := mux.Vars(r)["id"]
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var todo entity.Todo
+	db.First(&todo, id)
+	if todo.ID == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&todo)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	db.Save(&todo)
+	json.NewEncoder(w).Encode(todo)
 }
