@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/mateusdeitos/go-todolist/entity"
@@ -41,7 +42,6 @@ func createDb() *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-
 	return db
 }
 
@@ -55,17 +55,48 @@ func Wrapped(db *gorm.DB, h CustomHandler) http.HandlerFunc {
 	return http.HandlerFunc(fn)
 }
 
+type PaginatedResult[T any] struct {
+	Items  []T
+	Count  int64
+	Limit  int
+	Offset int
+}
+
 func ListTodosHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	result := []entity.Todo{}
-	todos := db.Find(&result)
+	var limit int
+	var offset int
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil {
+		limit = 10
+	}
+
+	offset, err = strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil {
+		offset = 0
+	}
+
+	todos := db.Limit(limit).Offset(offset).Find(&result)
 	if todos.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	var count int64
+	res := db.Find(&entity.Todo{}).Count(&count)
+	if res.Error != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 
-	json.NewEncoder(w).Encode(result)
+	json.NewEncoder(w).Encode(PaginatedResult[entity.Todo]{
+		Items:  result,
+		Count:  count,
+		Limit:  limit,
+		Offset: offset,
+	})
 }
 
 func CreateTodoHandler(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
