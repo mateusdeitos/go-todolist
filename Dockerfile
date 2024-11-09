@@ -1,9 +1,9 @@
 # primeiro builda o projeto
 FROM golang:1.22-alpine AS build
 
-WORKDIR /usr/app/src
+WORKDIR /usr/app
 
-COPY src/ .
+COPY . .
 RUN go mod download
 
 RUN go build -v -o server
@@ -11,12 +11,12 @@ RUN go build -v -o server
 # depois roda
 FROM alpine:3
 
-WORKDIR /usr/app/src
+WORKDIR /usr/app
 
 RUN apk add go
 
-COPY --from=build /usr/app/src .
+COPY --from=build /usr/app .
 
-CMD ["/usr/app/src/server"]
+CMD ["/usr/app/server"]
 
 EXPOSE 9000

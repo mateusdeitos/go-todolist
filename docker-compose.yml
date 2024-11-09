@@ -1,18 +1,15 @@
-version: "3.5"
+volumes:
+  pgdata:
 
 services:
   api:
     build:
       context: ./
       dockerfile: Dockerfile
-    # volumes:
-    #   - ./:/usr/app
-    depends_on:
-      - db
     environment:
       - DB_HOST=db
-      - DB_USER=admin
-      - DB_PASSWORD=123
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
       - DB_NAME=go_todo_list
       - DB_PORT=5432
       - SERVER_PORT=9000
@@ -23,21 +20,32 @@ services:
         - action: rebuild
           path: ./src
           target: /usr/app/src
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:latest
     hostname: db
     command: postgres
+    user: postgres
     environment:
       - POSTGRES_DB=go_todo_list
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=123
+      - PGUSER=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     ports:
       - "5432:5432"
     volumes:
-      - ./db:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 networks:
   default:
     driver: bridge
-    name: go_toto_list
+    name: go_todo_list

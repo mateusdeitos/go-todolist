@@ -1,0 +1,7 @@
+CREATE TABLE todos (
+	id 			BIGSERIAL PRIMARY KEY,
+	name		VARCHAR(255),
+	complete 	BOOLEAN,
+	created_at	TIMESTAMP WITH TIME ZONE,
+	updated_at	TIMESTAMP WITH TIME ZONE
+);
